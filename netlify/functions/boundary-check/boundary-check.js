@@ -1,4 +1,5 @@
 const axios = require("axios");
+const coordinates = require("../../../geofence").coordinates;
 const {
   NOTEHUB_AUTH_TOKEN,
   TWILIO_ACCOUNT_SID,
@@ -8,6 +9,7 @@ const {
 } = process.env;
 const twilio = require("twilio")(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
+// From https://stackoverflow.com/a/17490923/1373932
 function pointIsInPoly(p, polygon) {
   var isInside = false;
   var minX = polygon[0].x,
@@ -43,78 +45,51 @@ function pointIsInPoly(p, polygon) {
   return isInside;
 }
 
-// Generate these using a tool like https://www.keene.edu/campus/maps/tool/.
-/*
-const coordinates = [
-  { x: -84.6499372, y: 42.7666115 },
-  { x: -84.6538854, y: 42.7663122 },
-  { x: -84.6540141, y: 42.7623582 },
-  { x: -84.6520615, y: 42.7609246 },
-  { x: -84.6473622, y: 42.7611294 },
-  { x: -84.6452594, y: 42.7637918 },
-  { x: -84.6459675, y: 42.766391 },
-  { x: -84.6499372, y: 42.7665328 },
-  { x: -84.6499372, y: 42.7666115 },
-];
-*/
-
-const coordinates = [
-  {
-    x: -72.2836876,
-    y: 42.933867,
-  },
-  {
-    x: -72.2832584,
-    y: 42.9331758,
-  },
-  {
-    x: -72.2836018,
-    y: 42.9284626,
-  },
-  {
-    x: -72.2750187,
-    y: 42.9282112,
-  },
-  {
-    x: -72.2750187,
-    y: 42.93349,
-  },
-  {
-    x: -72.2836876,
-    y: 42.933867,
-  },
-];
-
 const updateEnvVar = () => {
   const timestamp = String(new Date().getTime() / 1000);
-  try {
-    axios.put(
-      "https://api.notefile.net/v1/projects/app:38591b70-4c0b-40f3-9e0c-c2c319eef1e3/devices/dev:868050040247765/environment_variables",
-      {
-        environment_variables: { last_notified: timestamp },
-      },
-      {
-        headers: {
-          "X-SESSION-TOKEN": NOTEHUB_AUTH_TOKEN,
+  return new Promise((resolve, reject) => {
+    console.log("Updating last notified timestamp in Notehub", timestamp);
+    axios
+      .put(
+        "https://api.notefile.net/v1/projects/app:38591b70-4c0b-40f3-9e0c-c2c319eef1e3/devices/dev:868050040247765/environment_variables",
+        {
+          environment_variables: { last_notified: timestamp },
         },
-      }
-    );
-  } catch (e) {
-    console.log("Failed to update Notehub environment variable");
-    console.log(e);
-  }
+        {
+          headers: {
+            "X-SESSION-TOKEN": NOTEHUB_AUTH_TOKEN,
+          },
+        }
+      )
+      .then(() => {
+        console.log("Last notified timestamp updated successfully");
+        resolve();
+      })
+      .catch((e) => {
+        console.error("Failed to update Notehub environment variable", e);
+        reject();
+      });
+  });
 };
 
 const sendTwilioSMS = (lat, lon) => {
-  try {
-    twilio.messages.create({
-      body: `Your asset left its geofence. Current location: https://maps.google.com/maps?q=${lat},${lon}`,
-      to: TWILIO_SMS_TO,
-      from: TWILIO_SMS_FROM,
-    });
-  } catch (e) {
-    console.log("Failed to send Twilio message.");
-  }
+  return new Promise((resolve, reject) => {
+    console.log("Sending Twilio SMS notification");
+    twilio.messages
+      .create({
+        body: `Your asset left its geofence. Current location: https://maps.google.com/maps?q=${lat},${lon}`,
+        to: TWILIO_SMS_TO,
+        from: TWILIO_SMS_FROM,
+      })
+      .then(() => {
+        console.log("SMS message sent successfully");
+        resolve();
+      })
+      .catch((e) => {
+        console.error("SMS message send failed", e);
+        reject();
+      });
+  });
 };
 
 // Docs on event and context https://www.netlify.com/docs/functions/#the-handler-method
@@ -134,10 +109,20 @@ const handler = async (event) => {
     return { statusCode: 500, body: "Invalid GPS coordinates" };
   }
 
+  console.log(`Received request for ${lat}, ${lon}`);
+
   const isInGeofence = pointIsInPoly({ x: lon, y: lat }, coordinates);
   if (!isInGeofence) {
-    updateEnvVar();
-    sendTwilioSMS(lat, lon);
+    try {
+      await updateEnvVar();
+    } catch (e) {
+      return { statusCode: 500, body: "Failed while updating Notehub" };
+    }
+    try {
+      await sendTwilioSMS(lat, lon);
+    } catch (e) {
+      return { statusCode: 500, body: "Failed while sending SMS notification" };
+    }
   }
 
   return {
