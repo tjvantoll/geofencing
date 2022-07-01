@@ -43,7 +43,9 @@ function pointIsInPoly(p, polygon) {
   return isInside;
 }
 
-var coordinates = [
+// Generate these using a tool like https://www.keene.edu/campus/maps/tool/.
+/*
+const coordinates = [
   { x: -84.6499372, y: 42.7666115 },
   { x: -84.6538854, y: 42.7663122 },
   { x: -84.6540141, y: 42.7623582 },
@@ -53,6 +55,34 @@ var coordinates = [
   { x: -84.6459675, y: 42.766391 },
   { x: -84.6499372, y: 42.7665328 },
   { x: -84.6499372, y: 42.7666115 },
+];
+*/
+
+const coordinates = [
+  {
+    x: -72.2836876,
+    y: 42.933867,
+  },
+  {
+    x: -72.2832584,
+    y: 42.9331758,
+  },
+  {
+    x: -72.2836018,
+    y: 42.9284626,
+  },
+  {
+    x: -72.2750187,
+    y: 42.9282112,
+  },
+  {
+    x: -72.2750187,
+    y: 42.93349,
+  },
+  {
+    x: -72.2836876,
+    y: 42.933867,
+  },
 ];
 
 const updateEnvVar = () => {
