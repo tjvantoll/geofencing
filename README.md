@@ -1,6 +1,5 @@
 # Geofencing With the Blues Wireless Notecard
 
-> **WARNING**: This repo is a work in progress.
+A cloud function that notifies when a Blues Wireless Notecard leaves a configured geofence. Learn how to use this repository on the following blog post:
 
-A cloud function that notifies when a Blues Wireless Notecard leaves a configured geofence.
-
+* [How to Build an Asset Tracker With Geofence-Driven Alerts](https://blues.io/blog/how-to-build-an-asset-tracker-with-geofence-alerts/)
